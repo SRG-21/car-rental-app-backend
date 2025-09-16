@@ -1,0 +1,58 @@
+{
+  "name": "car-rental-backend",
+  "version": "1.0.0",
+  "description": "Production-grade microservices backend for car rental platform",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter @car-rental/gateway dev\" \"pnpm --filter @car-rental/auth-service dev\" \"pnpm --filter @car-rental/car-service dev\" \"pnpm --filter @car-rental/search-service dev\" \"pnpm --filter @car-rental/booking-service dev\" \"pnpm --filter @car-rental/notification-service dev\"",
+    "build": "pnpm -r build",
+    "start": "node packages/gateway/dist/index.js",
+    "test": "pnpm -r test",
+    "test:coverage": "pnpm -r test:coverage",
+    "test:watch": "pnpm -r test:watch",
+    "test:integration": "pnpm -r test:integration",
+    "lint": "pnpm -r lint",
+    "lint:fix": "pnpm -r lint:fix",
+    "typecheck": "pnpm -r typecheck",
+    "migrate:dev": "pnpm --filter @car-rental/auth-service migrate:dev && pnpm --filter @car-rental/car-service migrate:dev && pnpm --filter @car-rental/booking-service migrate:dev",
+    "migrate:deploy": "pnpm --filter @car-rental/auth-service migrate:deploy && pnpm --filter @car-rental/car-service migrate:deploy && pnpm --filter @car-rental/booking-service migrate:deploy",
+    "migrate:test": "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/car_rental_test pnpm migrate:dev",
+    "prisma:generate": "pnpm --filter @car-rental/auth-service prisma:generate && pnpm --filter @car-rental/car-service prisma:generate && pnpm --filter @car-rental/booking-service prisma:generate",
+    "prisma:reset": "pnpm --filter @car-rental/auth-service prisma:reset && pnpm --filter @car-rental/car-service prisma:reset && pnpm --filter @car-rental/booking-service prisma:reset",
+    "seed": "tsx infra/seed.ts",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:clean": "docker compose down -v"
+  },
+  "keywords": [
+    "microservices",
+    "fastify",
+    "prisma",
+    "elasticsearch",
+    "typescript",
+    "car-rental",
+    "backend"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "@typescript-eslint/eslint-plugin": "^6.16.0",
+    "@typescript-eslint/parser": "^6.16.0",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.56.0",
+    "prettier": "^3.1.1",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "dependencies": {
+    "dotenv": "^17.2.3"
+  }
+}
