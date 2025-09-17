@@ -1,0 +1,204 @@
+version: '3.8'
+
+networks:
+  car-rental-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  elasticsearch_data:
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: car-rental-postgres
+    networks:
+      - car-rental-network
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_DB: car_rental
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: car-rental-elasticsearch
+    networks:
+      - car-rental-network
+    ports:
+      - '9200:9200'
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - 'ES_JAVA_OPTS=-Xms512m -Xmx512m'
+      - cluster.routing.allocation.disk.threshold_enabled=false
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:9200/_cluster/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  gateway:
+    build:
+      context: .
+      dockerfile: packages/gateway/Dockerfile
+    container_name: car-rental-gateway
+    networks:
+      - car-rental-network
+    ports:
+      - '3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      car-service:
+        condition: service_started
+      search-service:
+        condition: service_started
+      booking-service:
+        condition: service_started
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - CAR_SERVICE_URL=http://car-service:3002
+      - SEARCH_SERVICE_URL=http://search-service:3003
+      - BOOKING_SERVICE_URL=http://booking-service:3004
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3005
+      - FRONTEND_URL=http://localhost:5173
+      - JWT_SECRET=your-secret-key-change-in-production-min-32-chars
+      - LOG_LEVEL=debug
+      - RATE_LIMIT_MAX=100
+      - RATE_LIMIT_WINDOW=15m
+    volumes:
+      - ./packages/gateway:/app/packages/gateway
+      - ./packages/shared:/app/packages/shared
+      - /app/node_modules
+      - /app/packages/gateway/node_modules
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: packages/auth-service/Dockerfile
+    container_name: car-rental-auth
+    networks:
+      - car-rental-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/car_rental?connection_limit=5&pool_timeout=20
+      - JWT_SECRET=your-secret-key-change-in-production-min-32-chars
+      - JWT_EXPIRY=15m
+      - REFRESH_SECRET=your-refresh-secret-change-in-production-min-32-chars
+      - REFRESH_EXPIRY=7d
+      - BCRYPT_ROUNDS=10
+      - LOG_LEVEL=debug
+    volumes:
+      - ./packages/auth-service:/app/packages/auth-service
+      - ./packages/shared:/app/packages/shared
+      - /app/node_modules
+      - /app/packages/auth-service/node_modules
+
+  car-service:
+    build:
+      context: .
+      dockerfile: packages/car-service/Dockerfile
+    container_name: car-rental-car
+    networks:
+      - car-rental-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/car_rental?connection_limit=5&pool_timeout=20
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SEARCH_SERVICE_URL=http://search-service:3003
+      - LOG_LEVEL=debug
+    volumes:
+      - ./packages/car-service:/app/packages/car-service
+      - ./packages/shared:/app/packages/shared
+      - /app/node_modules
+      - /app/packages/car-service/node_modules
+
+  search-service:
+    build:
+      context: .
+      dockerfile: packages/search-service/Dockerfile
+    container_name: car-rental-search
+    networks:
+      - car-rental-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - PORT=3003
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - BOOKING_SERVICE_URL=http://booking-service:3004
+      - LOG_LEVEL=debug
+    volumes:
+      - ./packages/search-service:/app/packages/search-service
+      - ./packages/shared:/app/packages/shared
+      - /app/node_modules
+      - /app/packages/search-service/node_modules
+
+  booking-service:
+    build:
+      context: .
+      dockerfile: packages/booking-service/Dockerfile
+    container_name: car-rental-booking
+    networks:
+      - car-rental-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - PORT=3004
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/car_rental?connection_limit=5&pool_timeout=20
+      - CAR_SERVICE_URL=http://car-service:3002
+      - LOG_LEVEL=debug
+    volumes:
+      - ./packages/booking-service:/app/packages/booking-service
+      - ./packages/shared:/app/packages/shared
+      - /app/node_modules
+      - /app/packages/booking-service/node_modules
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: packages/notification-service/Dockerfile
+    container_name: car-rental-notification
+    networks:
+      - car-rental-network
+    environment:
+      - NODE_ENV=development
+      - PORT=3005
+      - SENDGRID_API_KEY=optional-for-demo
+      - LOG_LEVEL=debug
+    volumes:
+      - ./packages/notification-service:/app/packages/notification-service
+      - ./packages/shared:/app/packages/shared
+      - /app/node_modules
+      - /app/packages/notification-service/node_modules
