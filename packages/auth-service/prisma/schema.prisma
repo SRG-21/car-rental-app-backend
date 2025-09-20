@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  refreshTokens RefreshToken[]
+  bookings      Booking[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  tokenHash  String    @unique @map("token_hash")
+  userId     String    @map("user_id")
+  expiresAt  DateTime  @map("expires_at")
+  revoked    Boolean   @default(false)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastUsedAt DateTime? @map("last_used_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// These models are for schema completeness (managed by other services)
+model Car {
+  id           String   @id @default(uuid())
+  name         String
+  fuel         String
+  transmission String
+  seats        Int
+  year         Int?
+  pricePerDay  Decimal  @map("price_per_day") @db.Decimal(10, 2)
+  baseLat      Decimal  @map("base_lat") @db.Decimal(10, 8)
+  baseLng      Decimal  @map("base_lng") @db.Decimal(11, 8)
+  images       String[]
+  features     String[] @default([])
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  bookings Booking[]
+
+  @@index([isActive])
+  @@map("cars")
+}
+
+model Booking {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  carId       String   @map("car_id")
+  pickupTime  DateTime @map("pickup_time")
+  dropoffTime DateTime @map("dropoff_time")
+  totalPrice  Decimal  @map("total_price") @db.Decimal(10, 2)
+  status      String   @default("confirmed")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+  car  Car  @relation(fields: [carId], references: [id])
+
+  @@index([userId])
+  @@index([carId])
+  @@index([status])
+  @@map("bookings")
+}
