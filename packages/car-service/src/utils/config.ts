@@ -1,0 +1,9 @@
+import { config as dotenvConfig } from 'dotenv';
+import { join } from 'path';
+import { carEnvSchema } from './validation.js';
+
+// Load .env file - pnpm filter runs from the service directory
+// override: true ensures .env file values take precedence over existing env vars
+dotenvConfig({ path: join(process.cwd(), '.env'), override: true });
+
+export const config = carEnvSchema.parse(process.env);
