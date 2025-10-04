@@ -1,0 +1,37 @@
+# Build stage
+FROM node:18-alpine AS builder
+
+RUN npm install -g pnpm@8
+
+WORKDIR /app/packages/gateway
+
+# Copy package files
+COPY packages/gateway/package.json packages/gateway/tsconfig.json ./
+COPY packages/gateway/src ./src
+
+# Install ALL dependencies (including dev dependencies needed for build)
+COPY pnpm-lock.yaml ../../
+RUN pnpm install --frozen-lockfile
+
+# Build the service
+RUN pnpm run build
+
+# Production stage
+FROM node:18-alpine
+
+RUN npm install -g pnpm@8
+
+WORKDIR /app
+
+# Copy built application
+COPY --from=builder /app/packages/gateway/dist ./dist
+COPY --from=builder /app/packages/gateway/package.json ./
+
+# Install only production dependencies
+RUN pnpm install --prod --ignore-scripts
+
+WORKDIR /app
+
+EXPOSE 3000
+
+CMD ["node", "dist/index.js"]
