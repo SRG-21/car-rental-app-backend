@@ -34,7 +34,7 @@ export class AuthService {
     const user = await this.prisma.user.create({
       data: {
         email: data.email,
-        passwordHash,
+        password: passwordHash,
         name: data.name || null
       }
     });
@@ -63,7 +63,7 @@ export class AuthService {
     }
 
     // Verify password
-    const isValid = await HashUtils.comparePassword(data.password, user.passwordHash);
+    const isValid = await HashUtils.comparePassword(data.password, user.password);
 
     if (!isValid) {
       throw new UnauthorizedError('Invalid credentials');
@@ -83,12 +83,9 @@ export class AuthService {
    * Refresh access token using refresh token
    */
   async refreshToken(refreshTokenString: string): Promise<RefreshResponse> {
-    // Hash the incoming token
-    const tokenHash = HashUtils.hashToken(refreshTokenString);
-
     // Find refresh token in database
     const refreshToken = await this.prisma.refreshToken.findUnique({
-      where: { tokenHash },
+      where: { token: refreshTokenString },
       include: { user: true }
     });
 
@@ -96,20 +93,16 @@ export class AuthService {
       throw new UnauthorizedError('Invalid refresh token');
     }
 
-    // Check if token is revoked
-    if (refreshToken.revoked) {
-      throw new UnauthorizedError('Refresh token has been revoked');
-    }
-
     // Check if token is expired
     if (new Date() > refreshToken.expiresAt) {
+      // Delete expired token
+      await this.prisma.refreshToken.delete({ where: { id: refreshToken.id } });
       throw new UnauthorizedError('Refresh token expired');
     }
 
-    // Revoke old refresh token
-    await this.prisma.refreshToken.update({
-      where: { id: refreshToken.id },
-      data: { revoked: true }
+    // Delete old refresh token (rotate tokens)
+    await this.prisma.refreshToken.delete({
+      where: { id: refreshToken.id }
     });
 
     // Generate new tokens
@@ -142,11 +135,8 @@ export class AuthService {
    * Revoke a refresh token (logout)
    */
   async logout(refreshTokenString: string): Promise<void> {
-    const tokenHash = HashUtils.hashToken(refreshTokenString);
-
-    await this.prisma.refreshToken.updateMany({
-      where: { tokenHash },
-      data: { revoked: true }
+    await this.prisma.refreshToken.deleteMany({
+      where: { token: refreshTokenString }
     });
   }
 
@@ -165,7 +155,6 @@ export class AuthService {
 
     // Generate refresh token (random secure token)
     const refreshTokenString = HashUtils.generateSecureToken(32);
-    const tokenHash = HashUtils.hashToken(refreshTokenString);
 
     // Calculate expiry date
     const expiresAt = new Date();
@@ -175,7 +164,7 @@ export class AuthService {
     // Store refresh token in database
     await this.prisma.refreshToken.create({
       data: {
-        tokenHash,
+        token: refreshTokenString,
         userId: user.id,
         expiresAt
       }
