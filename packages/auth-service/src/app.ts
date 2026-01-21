@@ -2,11 +2,11 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { PrismaClient } from '@prisma/client';
-import { AuthService } from './services/auth.service';
-import { AuthController } from './controllers/auth.controller';
-import { authRoutes } from './routes/auth.routes';
-import { errorHandler } from './middleware/error.middleware';
-import config from './utils/config';
+import { AuthService } from './services/auth.service.js';
+import { AuthController } from './controllers/auth.controller.js';
+import { authRoutes } from './routes/auth.routes.js';
+import { errorHandler } from './middleware/error.middleware.js';
+import config from './utils/config.js';
 
 export async function buildApp() {
   // Create Fastify instance
