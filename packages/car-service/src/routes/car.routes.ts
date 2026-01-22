@@ -21,6 +21,11 @@ export async function carRoutes(
   });
 
   // Update car (admin only - no auth for now)
+  // Support both PUT and PATCH for flexibility
+  fastify.put('/:id', {
+    handler: controller.updateCar.bind(controller)
+  });
+
   fastify.patch('/:id', {
     handler: controller.updateCar.bind(controller)
   });
