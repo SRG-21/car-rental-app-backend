@@ -1,5 +1,6 @@
 import type { PrismaClient, Car } from '@prisma/client';
 import { Client as ElasticsearchClient } from '@elastic/elasticsearch';
+import axios from 'axios';
 import { NotFoundError } from '../utils/errors.js';
 import type {
   CreateCarRequest,
@@ -15,7 +16,8 @@ export class CarService {
 
   constructor(
     private readonly prisma: PrismaClient,
-    private readonly esClient: ElasticsearchClient
+    private readonly esClient: ElasticsearchClient,
+    private readonly searchServiceUrl: string
   ) {}
 
   /**
@@ -117,7 +119,24 @@ export class CarService {
     // Re-index in Elasticsearch
     await this.indexCar(updated);
 
+    // Trigger search service reindex (fire and forget - don't wait for completion)
+    this.triggerSearchReindex().catch((error) => {
+      console.error('Failed to trigger search reindex:', error.message);
+    });
+
     return this.toCarResponse(updated);
+  }
+
+  /**
+   * Trigger search service to reindex all cars
+   */
+  private async triggerSearchReindex(): Promise<void> {
+    try {
+      await axios.post(`${this.searchServiceUrl}/reindex`, {}, { timeout: 30000 });
+    } catch (error) {
+      // Log error but don't fail the update operation
+      throw new Error('Search reindex trigger failed');
+    }
   }
 
   /**

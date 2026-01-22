@@ -35,5 +35,6 @@ const envSchema = z.object({
 export const carEnvSchema = envSchema.extend({
   DATABASE_URL: z.string().url(),
   ELASTICSEARCH_URL: z.string().url(),
+  SEARCH_SERVICE_URL: z.string().url(),
   CORS_ORIGIN: z.string().default('*')
 });
