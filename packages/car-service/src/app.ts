@@ -17,7 +17,7 @@ const esClient = new ElasticsearchClient({
   node: config.ELASTICSEARCH_URL
 });
 
-const carService = new CarService(prisma, esClient);
+const carService = new CarService(prisma, esClient, config.SEARCH_SERVICE_URL);
 const carController = new CarController(carService);
 
 export const app = Fastify({
