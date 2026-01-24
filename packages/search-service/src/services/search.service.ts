@@ -1,15 +1,15 @@
-import { Client as ElasticsearchClient } from '@elastic/elasticsearch';
+import { Client } from '@opensearch-project/opensearch';
 import axios from 'axios';
 import type { SearchCarsRequest, SearchCarsResponse, CarResponse } from '../types/index.js';
 
 /**
- * Search Service - Handles Elasticsearch geo-spatial searches and availability checks
+ * Search Service - Handles OpenSearch geo-spatial searches and availability checks
  */
 export class SearchService {
   private readonly esIndex = 'cars';
 
   constructor(
-    private readonly esClient: ElasticsearchClient,
+    private readonly esClient: Client,
     private readonly bookingServiceUrl: string
   ) {}
 
@@ -95,7 +95,8 @@ export class SearchService {
       }
     });
 
-    const cars = response.hits.hits.map((hit: any) => {
+    const hits = response.body?.hits?.hits || [];
+    const cars = hits.map((hit: any) => {
       const source = hit._source;
       return {
         id: source.car_id || source.id,
@@ -141,6 +142,72 @@ export class SearchService {
       limit,
       totalPages: Math.ceil(availableCars.length / limit)
     };
+  }
+
+  /**
+   * Reindex all cars from car-service to Elasticsearch
+   */
+  async reindexCars(carServiceUrl: string): Promise<{ indexed: number; errors: number }> {
+    try {
+      // Fetch all cars from car-service (car-service expects / not /cars)
+      const response = await axios.get(carServiceUrl, { timeout: 10000 });
+      const cars = response.data?.data || [];
+
+      let indexed = 0;
+      let errors = 0;
+
+      // Bulk index operations
+      const bulkBody: any[] = [];
+
+      for (const car of cars) {
+        bulkBody.push({
+          index: {
+            _index: this.esIndex,
+            _id: car.id
+          }
+        });
+
+        bulkBody.push({
+          car_id: car.id,
+          name: car.name,
+          brand: car.brand,
+          model: car.model,
+          year: car.year,
+          fuel: car.fuelType,
+          transmission: car.transmission,
+          seats: car.seats,
+          price_per_day: car.pricePerDay,
+          images: car.images,
+          features: car.features,
+          location: {
+            lat: car.location.latitude,
+            lon: car.location.longitude
+          },
+          address: car.location.address,
+          city: car.location.city,
+          state: car.location.state,
+          country: car.location.country,
+          is_active: car.isActive
+        });
+      }
+
+      if (bulkBody.length > 0) {
+        const bulkResponse = await this.esClient.bulk({
+          body: bulkBody,
+          refresh: 'true' // Force refresh so changes are immediately visible
+        });
+
+        if (bulkResponse.body.errors) {
+          errors = bulkResponse.body.items.filter((item: any) => item.index?.error).length;
+        }
+        indexed = cars.length - errors;
+      }
+
+      return { indexed, errors };
+    } catch (error) {
+      console.error('Reindex failed:', error);
+      throw new Error('Failed to reindex cars from car-service');
+    }
   }
 
   /**
