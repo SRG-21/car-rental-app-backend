@@ -4,7 +4,10 @@ import { searchCarsSchema } from '../utils/validation.js';
 import type { SearchCarsRequest } from '../types/index.js';
 
 export class SearchController {
-  constructor(private readonly searchService: SearchService) {}
+  constructor(
+    private readonly searchService: SearchService,
+    private readonly carServiceUrl: string
+  ) {}
 
   /**
    * Search for cars
@@ -31,6 +34,26 @@ export class SearchController {
     reply.code(200).send({
       success: true,
       data: result
+    });
+  }
+
+  /**
+   * Reindex all cars from car-service
+   * POST /reindex
+   */
+  async reindexCars(
+    _request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<void> {
+    const result = await this.searchService.reindexCars(this.carServiceUrl);
+
+    reply.code(200).send({
+      success: true,
+      data: {
+        message: `Successfully reindexed ${result.indexed} cars`,
+        indexed: result.indexed,
+        errors: result.errors
+      }
     });
   }
 }
