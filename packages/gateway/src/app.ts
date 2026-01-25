@@ -2,9 +2,9 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
-import { registerRoutes } from './routes';
-import { errorHandler } from './middleware/error.middleware';
-import config from './utils/config';
+import { registerRoutes } from './routes/index.js';
+import { errorHandler } from './middleware/error.middleware.js';
+import config from './utils/config.js';
 
 export async function buildApp() {
   const app = Fastify({

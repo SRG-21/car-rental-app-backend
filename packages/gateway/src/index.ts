@@ -1,5 +1,5 @@
-import { buildApp } from './app';
-import config from './utils/config';
+import { buildApp } from './app.js';
+import config from './utils/config.js';
 
 async function start() {
   try {

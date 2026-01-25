@@ -1,6 +1,7 @@
 {
   "name": "@car-rental/gateway",
   "version": "1.0.0",
+  "type": "module",
   "description": "API Gateway for car rental microservices",
   "main": "dist/index.js",
   "scripts": {
