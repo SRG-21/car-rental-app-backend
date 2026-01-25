@@ -1,6 +1,6 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import config from '../utils/config';
+import config from '../utils/config.js';
 
 /**
  * Service for proxying requests to backend microservices
@@ -28,7 +28,9 @@ export class ProxyService {
    * Proxy request to search service
    */
   async proxyToSearch(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    await this.proxy(request, reply, config.SEARCH_SERVICE_URL, request.url);
+    // Remove /search prefix from URL to forward to search service
+    const targetUrl = request.url.replace(/^\/search/, '');
+    await this.proxy(request, reply, config.SEARCH_SERVICE_URL, targetUrl);
   }
 
   /**
