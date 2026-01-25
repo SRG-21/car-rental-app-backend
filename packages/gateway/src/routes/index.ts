@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
-import { ProxyService } from '../services/proxy.service';
-import { HealthService } from '../services/health.service';
-import { jwtValidationMiddleware } from '../middleware/auth.middleware';
+import { ProxyService } from '../services/proxy.service.js';
+import { HealthService } from '../services/health.service.js';
+import { jwtValidationMiddleware } from '../middleware/auth.middleware.js';
 
 /**
  * Register all gateway routes
@@ -102,6 +102,12 @@ export function registerRoutes(fastify: FastifyInstance): void {
         }
       }
     },
+    proxyService.proxyToSearch.bind(proxyService)
+  );
+
+  // Reindex endpoint - admin only (no auth for simplicity)
+  fastify.post(
+    '/search/reindex',
     proxyService.proxyToSearch.bind(proxyService)
   );
 
