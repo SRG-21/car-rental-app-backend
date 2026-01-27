@@ -1,10 +1,10 @@
 import { PrismaClient } from '@prisma/client';
-import { Client } from '@elastic/elasticsearch';
+import { Client } from '@opensearch-project/opensearch';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 const esClient = new Client({ 
-  node: process.env.ELASTICSEARCH_URL || 'http://localhost:9200' 
+  node: process.env.ELASTICSEARCH_URL || 'http://localhost:9200'
 });
 
 const SAN_FRANCISCO = { lat: 37.7749, lng: -122.4194 };
@@ -24,10 +24,36 @@ function randomLocation(center: { lat: number; lng: number }, radiusKm: number) 
   };
 }
 
+// Street addresses in San Francisco
+const SF_ADDRESSES = [
+  { address: '1 Market Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '555 Mission Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '101 California Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '350 Bush Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '425 Market Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '50 Fremont Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '345 Spear Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '201 3rd Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '600 California Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '555 California Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '123 Mission Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '77 Beale Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '180 Sansome Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '650 California Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '44 Montgomery Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '100 First Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '525 Market Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '150 Spear Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '235 Pine Street', city: 'San Francisco', state: 'California', country: 'USA' },
+  { address: '400 Howard Street', city: 'San Francisco', state: 'California', country: 'USA' },
+];
+
 const CARS_DATA = [
   {
     name: 'Tesla Model 3',
-    fuel: 'electric',
+    brand: 'Tesla',
+    model: 'Model 3',
+    fuelType: 'electric',
     transmission: 'automatic',
     seats: 5,
     year: 2023,
@@ -35,8 +61,10 @@ const CARS_DATA = [
     features: ['Autopilot', 'Premium Audio', 'Glass Roof', 'Heated Seats']
   },
   {
-    name: 'Toyota Camry',
-    fuel: 'hybrid',
+    name: 'Toyota Camry Hybrid',
+    brand: 'Toyota',
+    model: 'Camry',
+    fuelType: 'hybrid',
     transmission: 'automatic',
     seats: 5,
     year: 2022,
@@ -44,8 +72,10 @@ const CARS_DATA = [
     features: ['Backup Camera', 'Bluetooth', 'Lane Assist']
   },
   {
-    name: 'Ford Mustang',
-    fuel: 'petrol',
+    name: 'Ford Mustang GT',
+    brand: 'Ford',
+    model: 'Mustang',
+    fuelType: 'petrol',
     transmission: 'manual',
     seats: 4,
     year: 2021,
@@ -54,7 +84,9 @@ const CARS_DATA = [
   },
   {
     name: 'Honda Civic',
-    fuel: 'petrol',
+    brand: 'Honda',
+    model: 'Civic',
+    fuelType: 'petrol',
     transmission: 'automatic',
     seats: 5,
     year: 2023,
@@ -63,7 +95,9 @@ const CARS_DATA = [
   },
   {
     name: 'BMW 3 Series',
-    fuel: 'diesel',
+    brand: 'BMW',
+    model: '3 Series',
+    fuelType: 'diesel',
     transmission: 'automatic',
     seats: 5,
     year: 2022,
@@ -72,7 +106,9 @@ const CARS_DATA = [
   },
   {
     name: 'Chevrolet Suburban',
-    fuel: 'petrol',
+    brand: 'Chevrolet',
+    model: 'Suburban',
+    fuelType: 'petrol',
     transmission: 'automatic',
     seats: 7,
     year: 2023,
@@ -81,7 +117,9 @@ const CARS_DATA = [
   },
   {
     name: 'Tesla Model Y',
-    fuel: 'electric',
+    brand: 'Tesla',
+    model: 'Model Y',
+    fuelType: 'electric',
     transmission: 'automatic',
     seats: 7,
     year: 2023,
@@ -90,7 +128,9 @@ const CARS_DATA = [
   },
   {
     name: 'Nissan Leaf',
-    fuel: 'electric',
+    brand: 'Nissan',
+    model: 'Leaf',
+    fuelType: 'electric',
     transmission: 'automatic',
     seats: 5,
     year: 2022,
@@ -99,7 +139,9 @@ const CARS_DATA = [
   },
   {
     name: 'Audi A4',
-    fuel: 'petrol',
+    brand: 'Audi',
+    model: 'A4',
+    fuelType: 'petrol',
     transmission: 'automatic',
     seats: 5,
     year: 2023,
@@ -108,7 +150,9 @@ const CARS_DATA = [
   },
   {
     name: 'Mazda CX-5',
-    fuel: 'petrol',
+    brand: 'Mazda',
+    model: 'CX-5',
+    fuelType: 'petrol',
     transmission: 'automatic',
     seats: 5,
     year: 2022,
@@ -116,8 +160,10 @@ const CARS_DATA = [
     features: ['All-Wheel Drive', 'Blind Spot Monitor', 'Adaptive Cruise']
   },
   {
-    name: 'Porsche 911',
-    fuel: 'petrol',
+    name: 'Porsche 911 Carrera',
+    brand: 'Porsche',
+    model: '911',
+    fuelType: 'petrol',
     transmission: 'manual',
     seats: 2,
     year: 2023,
@@ -126,7 +172,9 @@ const CARS_DATA = [
   },
   {
     name: 'Hyundai Kona Electric',
-    fuel: 'electric',
+    brand: 'Hyundai',
+    model: 'Kona Electric',
+    fuelType: 'electric',
     transmission: 'automatic',
     seats: 5,
     year: 2023,
@@ -134,8 +182,10 @@ const CARS_DATA = [
     features: ['Fast Charging', 'Heated Seats', 'Wireless Charging']
   },
   {
-    name: 'Jeep Wrangler',
-    fuel: 'petrol',
+    name: 'Jeep Wrangler Rubicon',
+    brand: 'Jeep',
+    model: 'Wrangler',
+    fuelType: 'petrol',
     transmission: 'manual',
     seats: 4,
     year: 2022,
@@ -144,7 +194,9 @@ const CARS_DATA = [
   },
   {
     name: 'Mercedes E-Class',
-    fuel: 'diesel',
+    brand: 'Mercedes-Benz',
+    model: 'E-Class',
+    fuelType: 'diesel',
     transmission: 'automatic',
     seats: 5,
     year: 2023,
@@ -153,7 +205,9 @@ const CARS_DATA = [
   },
   {
     name: 'Volkswagen ID.4',
-    fuel: 'electric',
+    brand: 'Volkswagen',
+    model: 'ID.4',
+    fuelType: 'electric',
     transmission: 'automatic',
     seats: 5,
     year: 2023,
@@ -162,7 +216,9 @@ const CARS_DATA = [
   },
   {
     name: 'Subaru Outback',
-    fuel: 'petrol',
+    brand: 'Subaru',
+    model: 'Outback',
+    fuelType: 'petrol',
     transmission: 'automatic',
     seats: 5,
     year: 2022,
@@ -170,8 +226,10 @@ const CARS_DATA = [
     features: ['Symmetrical AWD', 'EyeSight Safety', 'Roof Rails']
   },
   {
-    name: 'Lexus RX 350',
-    fuel: 'hybrid',
+    name: 'Lexus RX 350h',
+    brand: 'Lexus',
+    model: 'RX 350',
+    fuelType: 'hybrid',
     transmission: 'automatic',
     seats: 5,
     year: 2023,
@@ -180,7 +238,9 @@ const CARS_DATA = [
   },
   {
     name: 'Kia Niro EV',
-    fuel: 'electric',
+    brand: 'Kia',
+    model: 'Niro EV',
+    fuelType: 'electric',
     transmission: 'automatic',
     seats: 5,
     year: 2022,
@@ -188,8 +248,10 @@ const CARS_DATA = [
     features: ['Heat Pump', 'Smart Cruise Control', 'Wireless CarPlay']
   },
   {
-    name: 'Dodge Charger',
-    fuel: 'petrol',
+    name: 'Dodge Charger RT',
+    brand: 'Dodge',
+    model: 'Charger',
+    fuelType: 'petrol',
     transmission: 'automatic',
     seats: 5,
     year: 2023,
@@ -198,7 +260,9 @@ const CARS_DATA = [
   },
   {
     name: 'Mini Cooper S',
-    fuel: 'petrol',
+    brand: 'Mini',
+    model: 'Cooper S',
+    fuelType: 'petrol',
     transmission: 'manual',
     seats: 4,
     year: 2022,
@@ -234,12 +298,18 @@ async function seed() {
           properties: {
             car_id: { type: 'keyword' },
             name: { type: 'text', analyzer: 'standard' },
+            make: { type: 'keyword' },
+            model: { type: 'keyword' },
             fuel: { type: 'keyword' },
             transmission: { type: 'keyword' },
             seats: { type: 'integer' },
             year: { type: 'integer' },
             price_per_day: { type: 'float' },
             location: { type: 'geo_point' },
+            address: { type: 'text' },
+            city: { type: 'keyword' },
+            state: { type: 'keyword' },
+            country: { type: 'keyword' },
             images: { type: 'keyword' },
             features: { type: 'keyword' },
             is_active: { type: 'boolean' }
@@ -255,7 +325,7 @@ async function seed() {
     const testUser1 = await prisma.user.create({
       data: {
         email: 'test@example.com',
-        passwordHash,
+        password: passwordHash,
         name: 'Test User'
       }
     });
@@ -263,7 +333,7 @@ async function seed() {
     const testUser2 = await prisma.user.create({
       data: {
         email: 'demo@example.com',
-        passwordHash,
+        password: passwordHash,
         name: 'Demo User'
       }
     });
@@ -274,41 +344,61 @@ async function seed() {
     console.log('🚗 Creating cars...');
     const cars = [];
 
-    for (const carData of CARS_DATA) {
+    for (let i = 0; i < CARS_DATA.length; i++) {
+      const carData = CARS_DATA[i];
       const location = randomLocation(SAN_FRANCISCO, 10);
+      const addressData = SF_ADDRESSES[i % SF_ADDRESSES.length];
 
       const car = await prisma.car.create({
         data: {
-          ...carData,
-          baseLat: location.lat,
-          baseLng: location.lng,
+          name: carData.name,
+          brand: carData.brand,
+          model: carData.model,
+          year: carData.year,
+          fuelType: carData.fuelType,
+          transmission: carData.transmission,
+          seats: carData.seats,
+          pricePerDay: carData.pricePerDay,
+          latitude: location.lat,
+          longitude: location.lng,
+          address: addressData.address,
+          city: addressData.city,
+          state: addressData.state,
+          country: addressData.country,
           images: [
             `https://via.placeholder.com/800x600/4F46E5/FFFFFF?text=${encodeURIComponent(carData.name)}`,
             `https://via.placeholder.com/800x600/7C3AED/FFFFFF?text=${encodeURIComponent(carData.name)}+Interior`,
             `https://via.placeholder.com/800x600/2563EB/FFFFFF?text=${encodeURIComponent(carData.name)}+Side`
           ],
+          features: carData.features,
           isActive: true
         }
       });
 
       cars.push(car);
 
-      // Index in Elasticsearch
+      // Index in Elasticsearch/OpenSearch
       await esClient.index({
         index: 'cars',
         id: car.id,
-        document: {
+        body: {
           car_id: car.id,
           name: car.name,
-          fuel: car.fuel,
+          make: car.brand,
+          model: car.model,
+          fuel: car.fuelType,
           transmission: car.transmission,
           seats: car.seats,
           year: car.year,
           price_per_day: Number(car.pricePerDay),
           location: {
-            lat: Number(car.baseLat),
-            lon: Number(car.baseLng)
+            lat: Number(car.latitude),
+            lon: Number(car.longitude)
           },
+          address: car.address,
+          city: car.city,
+          state: car.state,
+          country: car.country,
           images: car.images,
           features: car.features,
           is_active: car.isActive
