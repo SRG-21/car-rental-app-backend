@@ -1,0 +1,156 @@
+# Production docker-compose for Render deployment
+# All databases (Postgres, Elasticsearch) are cloud-hosted
+# All environment variables loaded from .env.production
+
+networks:
+  car-rental-network:
+    driver: bridge
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: packages/gateway/Dockerfile
+    container_name: car-rental-gateway
+    networks:
+      - car-rental-network
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - CAR_SERVICE_URL=http://car-service:3002
+      - SEARCH_SERVICE_URL=http://search-service:3003
+      - BOOKING_SERVICE_URL=http://booking-service:3004
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3005
+    depends_on:
+      - auth-service
+      - car-service
+      - search-service
+      - booking-service
+      - notification-service
+    restart: always
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3000/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: packages/auth-service/Dockerfile
+    container_name: car-rental-auth
+    networks:
+      - car-rental-network
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=${AUTH_DATABASE_URL}
+    restart: always
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3001/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  car-service:
+    build:
+      context: .
+      dockerfile: packages/car-service/Dockerfile
+    container_name: car-rental-car
+    networks:
+      - car-rental-network
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - DATABASE_URL=${CAR_DATABASE_URL}
+      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL}
+      - SEARCH_SERVICE_URL=http://search-service:3003
+    restart: always
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3002/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  search-service:
+    build:
+      context: .
+      dockerfile: packages/search-service/Dockerfile
+    container_name: car-rental-search
+    networks:
+      - car-rental-network
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=3003
+      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL}
+      - CAR_SERVICE_URL=http://car-service:3002
+      - BOOKING_SERVICE_URL=http://booking-service:3004
+    restart: always
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3003/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  booking-service:
+    build:
+      context: .
+      dockerfile: packages/booking-service/Dockerfile
+    container_name: car-rental-booking
+    networks:
+      - car-rental-network
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=3004
+      - DATABASE_URL=${BOOKING_DATABASE_URL}
+      - CAR_SERVICE_URL=http://car-service:3002
+    restart: always
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3004/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: packages/notification-service/Dockerfile
+    container_name: car-rental-notification
+    networks:
+      - car-rental-network
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=3005
+    restart: always
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3005/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# ========================================
+# NOTES FOR RENDER DEPLOYMENT
+# ========================================
+# - All services are on 'car-rental-network' for internal communication
+# - Databases (Postgres, Elasticsearch) are cloud-hosted, not containers
+# - Set these in .env.production:
+#   AUTH_DATABASE_URL=postgres://user:pass@your-cloud-postgres:5432/authdb
+#   CAR_DATABASE_URL=postgres://user:pass@your-cloud-postgres:5432/cardb
+#   BOOKING_DATABASE_URL=postgres://user:pass@your-cloud-postgres:5432/bookingdb
+#   ELASTICSEARCH_URL=https://your-cloud-elasticsearch:9200
+#   JWT_SECRET, REFRESH_SECRET, SENDGRID_API_KEY, etc.
