@@ -1,10 +1,6 @@
 ﻿# Car Rental Backend - Microservices
 
-
-
 Production-grade backend for a car rental platform built with TypeScript, Fastify, Prisma, and Elasticsearch.
-
-**📖 READ**: [`IMPLEMENTATION_COMPLETE.md`](./IMPLEMENTATION_COMPLETE.md) - See what's been created and next steps
 
 ## ✅ What's Ready
 
