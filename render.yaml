@@ -1,11 +1,8 @@
 # Render Blueprint - Car Rental Backend Microservices
 # https://render.com/docs/blueprint-spec
 #
-# Deploy with: Connect repo to Render and select this blueprint
-# Or use: render blueprint apply
-#
-# IMPORTANT: After deploying, update the SERVICE_URL environment variables
-# with the actual Render service URLs (e.g., https://car-rental-auth.onrender.com)
+# IMPORTANT: On Render free tier, services communicate via PUBLIC URLs
+# The URLs below assume your services will be named as specified
 
 services:
   # ========================================
@@ -27,39 +24,23 @@ services:
       - key: LOG_LEVEL
         value: info
       - key: FRONTEND_URL
-        value: https://car-rental-app.sankalpai.dev
+        value: http://localhost:5173
       - key: JWT_SECRET
         sync: false
       - key: RATE_LIMIT_MAX
         value: 100
       - key: RATE_LIMIT_WINDOW
         value: 15m
-      # Update these after all services are deployed with actual Render URLs
       - key: AUTH_SERVICE_URL
-        fromService:
-          name: car-rental-auth
-          type: web
-          property: hostport
+        value: https://car-rental-auth.onrender.com
       - key: CAR_SERVICE_URL
-        fromService:
-          name: car-rental-car
-          type: web
-          property: hostport
+        value: https://car-rental-car.onrender.com
       - key: SEARCH_SERVICE_URL
-        fromService:
-          name: car-rental-search
-          type: web
-          property: hostport
+        value: https://car-rental-search.onrender.com
       - key: BOOKING_SERVICE_URL
-        fromService:
-          name: car-rental-booking
-          type: web
-          property: hostport
+        value: https://car-rental-booking.onrender.com
       - key: NOTIFICATION_SERVICE_URL
-        fromService:
-          name: car-rental-notification
-          type: web
-          property: hostport
+        value: https://car-rental-notification.onrender.com
 
   # ========================================
   # AUTH SERVICE
@@ -80,7 +61,7 @@ services:
       - key: LOG_LEVEL
         value: info
       - key: DATABASE_URL
-        sync: false  # Set manually - your Render Postgres connection string
+        sync: false
       - key: JWT_SECRET
         sync: false
       - key: JWT_EXPIRY
@@ -111,14 +92,11 @@ services:
       - key: LOG_LEVEL
         value: info
       - key: DATABASE_URL
-        sync: false  # Set manually - your Render Postgres connection string
+        sync: false
       - key: ELASTICSEARCH_URL
-        sync: false  # Set manually - your Bonsai Elasticsearch URL
+        sync: false
       - key: SEARCH_SERVICE_URL
-        fromService:
-          name: car-rental-search
-          type: web
-          property: hostport
+        value: https://car-rental-search.onrender.com
 
   # ========================================
   # SEARCH SERVICE
@@ -139,17 +117,11 @@ services:
       - key: LOG_LEVEL
         value: info
       - key: ELASTICSEARCH_URL
-        sync: false  # Set manually - your Bonsai Elasticsearch URL
+        sync: false
       - key: CAR_SERVICE_URL
-        fromService:
-          name: car-rental-car
-          type: web
-          property: hostport
+        value: https://car-rental-car.onrender.com
       - key: BOOKING_SERVICE_URL
-        fromService:
-          name: car-rental-booking
-          type: web
-          property: hostport
+        value: https://car-rental-booking.onrender.com
 
   # ========================================
   # BOOKING SERVICE
@@ -170,12 +142,9 @@ services:
       - key: LOG_LEVEL
         value: info
       - key: DATABASE_URL
-        sync: false  # Set manually - your Render Postgres connection string
+        sync: false
       - key: CAR_SERVICE_URL
-        fromService:
-          name: car-rental-car
-          type: web
-          property: hostport
+        value: https://car-rental-car.onrender.com
 
   # ========================================
   # NOTIFICATION SERVICE
@@ -196,31 +165,30 @@ services:
       - key: LOG_LEVEL
         value: info
       - key: SENDGRID_API_KEY
-        sync: false  # Set manually if using email notifications
+        sync: false
 
 # ========================================
-# DATABASE (Optional - if you want Render-managed Postgres)
+# SECRETS TO SET MANUALLY AFTER DEPLOYMENT
 # ========================================
-# Uncomment below to create a Render-managed PostgreSQL database
-# databases:
-#   - name: car-rental-db
-#     plan: free
-#     region: oregon
-#     databaseName: car_rental
-#     user: car_rental_user
-
-# ========================================
-# SETUP INSTRUCTIONS
-# ========================================
-# 1. Push this file to your repo
-# 2. Go to Render Dashboard > Blueprints > New Blueprint Instance
-# 3. Connect your GitHub repo
-# 4. After deployment, set these secret environment variables manually:
-#    - JWT_SECRET (generate with: openssl rand -base64 32)
-#    - REFRESH_SECRET (generate with: openssl rand -base64 32)
-#    - DATABASE_URL (your Render Postgres external URL)
-#    - ELASTICSEARCH_URL (your Bonsai Elasticsearch URL with credentials)
-#    - SENDGRID_API_KEY (if using email)
+# Go to each service's Environment tab and set:
 #
-# 5. Note: Free tier services spin down after 15 mins of inactivity
-#    First request after spin-down takes ~30 seconds
+# car-rental-auth:
+#   DATABASE_URL = postgresql://car_rental_db_tsoo_user:xxx@dpg-xxx.oregon-postgres.render.com/car_rental_db_tsoo
+#   JWT_SECRET = CVaA77s/xmKLEg1i6567k2ypwBtS3c9FkQtTO5K1lHI=
+#   REFRESH_SECRET = j7Ord0zhYuMKNMB54m2Ap8iLHOhHyOP2BjCjUyqtqfU=
+#
+# car-rental-car:
+#   DATABASE_URL = (same as auth)
+#   ELASTICSEARCH_URL = https://user:pass@your-bonsai-url.bonsaisearch.net
+#
+# car-rental-search:
+#   ELASTICSEARCH_URL = (same as car)
+#
+# car-rental-booking:
+#   DATABASE_URL = (same as auth)
+#
+# car-rental-gateway:
+#   JWT_SECRET = (same as auth)
+#
+# car-rental-notification:
+#   SENDGRID_API_KEY = your-api-key (optional)
