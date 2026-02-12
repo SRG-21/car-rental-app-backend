@@ -10,8 +10,17 @@ export function registerRoutes(fastify: FastifyInstance): void {
   const proxyService = new ProxyService();
   const healthService = new HealthService();
 
-  // Health check endpoints
+  // Simple health check for Render (always returns 200 if gateway is running)
   fastify.get('/health', async (_request, reply) => {
+    reply.code(200).send({
+      status: 'ok',
+      service: 'gateway',
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Real health check that includes backend services status
+  fastify.get('/real-health-check', async (_request, reply) => {
     const health = await healthService.checkAllServices();
     reply.code(health.status === 'healthy' ? 200 : 503).send(health);
   });
