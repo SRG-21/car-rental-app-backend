@@ -1,0 +1,226 @@
+# Render Blueprint - Car Rental Backend Microservices
+# https://render.com/docs/blueprint-spec
+#
+# Deploy with: Connect repo to Render and select this blueprint
+# Or use: render blueprint apply
+#
+# IMPORTANT: After deploying, update the SERVICE_URL environment variables
+# with the actual Render service URLs (e.g., https://car-rental-auth.onrender.com)
+
+services:
+  # ========================================
+  # API GATEWAY - Public facing
+  # ========================================
+  - type: web
+    name: car-rental-gateway
+    runtime: docker
+    dockerfilePath: packages/gateway/Dockerfile
+    dockerContext: .
+    region: oregon
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: LOG_LEVEL
+        value: info
+      - key: FRONTEND_URL
+        value: https://car-rental-app.sankalpai.dev
+      - key: JWT_SECRET
+        sync: false
+      - key: RATE_LIMIT_MAX
+        value: 100
+      - key: RATE_LIMIT_WINDOW
+        value: 15m
+      # Update these after all services are deployed with actual Render URLs
+      - key: AUTH_SERVICE_URL
+        fromService:
+          name: car-rental-auth
+          type: web
+          property: hostport
+      - key: CAR_SERVICE_URL
+        fromService:
+          name: car-rental-car
+          type: web
+          property: hostport
+      - key: SEARCH_SERVICE_URL
+        fromService:
+          name: car-rental-search
+          type: web
+          property: hostport
+      - key: BOOKING_SERVICE_URL
+        fromService:
+          name: car-rental-booking
+          type: web
+          property: hostport
+      - key: NOTIFICATION_SERVICE_URL
+        fromService:
+          name: car-rental-notification
+          type: web
+          property: hostport
+
+  # ========================================
+  # AUTH SERVICE
+  # ========================================
+  - type: web
+    name: car-rental-auth
+    runtime: docker
+    dockerfilePath: packages/auth-service/Dockerfile
+    dockerContext: .
+    region: oregon
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        sync: false  # Set manually - your Render Postgres connection string
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRY
+        value: 15m
+      - key: REFRESH_SECRET
+        sync: false
+      - key: REFRESH_EXPIRY
+        value: 7d
+      - key: BCRYPT_ROUNDS
+        value: 12
+
+  # ========================================
+  # CAR SERVICE
+  # ========================================
+  - type: web
+    name: car-rental-car
+    runtime: docker
+    dockerfilePath: packages/car-service/Dockerfile
+    dockerContext: .
+    region: oregon
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3002
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        sync: false  # Set manually - your Render Postgres connection string
+      - key: ELASTICSEARCH_URL
+        sync: false  # Set manually - your Bonsai Elasticsearch URL
+      - key: SEARCH_SERVICE_URL
+        fromService:
+          name: car-rental-search
+          type: web
+          property: hostport
+
+  # ========================================
+  # SEARCH SERVICE
+  # ========================================
+  - type: web
+    name: car-rental-search
+    runtime: docker
+    dockerfilePath: packages/search-service/Dockerfile
+    dockerContext: .
+    region: oregon
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3003
+      - key: LOG_LEVEL
+        value: info
+      - key: ELASTICSEARCH_URL
+        sync: false  # Set manually - your Bonsai Elasticsearch URL
+      - key: CAR_SERVICE_URL
+        fromService:
+          name: car-rental-car
+          type: web
+          property: hostport
+      - key: BOOKING_SERVICE_URL
+        fromService:
+          name: car-rental-booking
+          type: web
+          property: hostport
+
+  # ========================================
+  # BOOKING SERVICE
+  # ========================================
+  - type: web
+    name: car-rental-booking
+    runtime: docker
+    dockerfilePath: packages/booking-service/Dockerfile
+    dockerContext: .
+    region: oregon
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3004
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        sync: false  # Set manually - your Render Postgres connection string
+      - key: CAR_SERVICE_URL
+        fromService:
+          name: car-rental-car
+          type: web
+          property: hostport
+
+  # ========================================
+  # NOTIFICATION SERVICE
+  # ========================================
+  - type: web
+    name: car-rental-notification
+    runtime: docker
+    dockerfilePath: packages/notification-service/Dockerfile
+    dockerContext: .
+    region: oregon
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3005
+      - key: LOG_LEVEL
+        value: info
+      - key: SENDGRID_API_KEY
+        sync: false  # Set manually if using email notifications
+
+# ========================================
+# DATABASE (Optional - if you want Render-managed Postgres)
+# ========================================
+# Uncomment below to create a Render-managed PostgreSQL database
+# databases:
+#   - name: car-rental-db
+#     plan: free
+#     region: oregon
+#     databaseName: car_rental
+#     user: car_rental_user
+
+# ========================================
+# SETUP INSTRUCTIONS
+# ========================================
+# 1. Push this file to your repo
+# 2. Go to Render Dashboard > Blueprints > New Blueprint Instance
+# 3. Connect your GitHub repo
+# 4. After deployment, set these secret environment variables manually:
+#    - JWT_SECRET (generate with: openssl rand -base64 32)
+#    - REFRESH_SECRET (generate with: openssl rand -base64 32)
+#    - DATABASE_URL (your Render Postgres external URL)
+#    - ELASTICSEARCH_URL (your Bonsai Elasticsearch URL with credentials)
+#    - SENDGRID_API_KEY (if using email)
+#
+# 5. Note: Free tier services spin down after 15 mins of inactivity
+#    First request after spin-down takes ~30 seconds
