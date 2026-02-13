@@ -38,7 +38,7 @@ services:
       - key: SEARCH_SERVICE_URL
         value: https://car-rental-search.onrender.com
       - key: BOOKING_SERVICE_URL
-        value: https://car-rental-booking.onrender.com
+        value: https://car-rental-booking-ejpi.onrender.com
       - key: NOTIFICATION_SERVICE_URL
         value: https://car-rental-notification.onrender.com
 
@@ -121,7 +121,7 @@ services:
       - key: CAR_SERVICE_URL
         value: https://car-rental-car.onrender.com
       - key: BOOKING_SERVICE_URL
-        value: https://car-rental-booking.onrender.com
+        value: https://car-rental-booking-ejpi.onrender.com
 
   # ========================================
   # BOOKING SERVICE
